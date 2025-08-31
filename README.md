@@ -34,3 +34,23 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## What we use
+
+- Extensions: ESLint, Prettier, Rainbow Bracket, ES7+ React/Redux/React-Native snippets, Tailwind CSS IntelliSense
+
+
+- Next js 15.5.2
+- React 19
+- Tailwind CSS v3 3.4.16
+- Imagekit
+
+- PostGreSQL with NEON
+- Auth.js, for encrypt password we use decryptjs
+- Drizzle ORM
+- Upstash for rate limiting for prevent DDoS attack, Qstash for workflows
+- Shadcn 3.0.0
+- - Button
+- - React Hook Form
+- - Toast/Sonner
+- - Avatar
