@@ -26,7 +26,7 @@ export const sendEmail = async ({
       provider: resend({ token: config.env.resendToken }),
     },
     body: {
-      from: "Shelfwise <lib.shelfwise.site>",
+      from: "Shelfwise <shelfwise.site>",
       to: [email],
       subject,
       html: message,
