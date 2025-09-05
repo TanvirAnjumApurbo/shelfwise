@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import FileUpload from "@/components/FileUpload";
 import ColorPicker from "@/components/admin/ColorPicker";
-import { createBook } from "@/lib/admin/actions/book";
+import { createBook, updateBook } from "@/lib/admin/actions/book";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -62,35 +62,37 @@ type BookFormInput = {
   aboutAuthor?: string;
 };
 
-const BookForm = ({ type, ...book }: Props) => {
+const BookForm = ({ type = "create", ...book }: Props) => {
   const router = useRouter();
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const form = useForm<BookFormInput>({
     resolver: zodResolver(bookSchema) as any,
     defaultValues: {
-      title: "",
-      description: "",
-      author: "",
-      genre: "",
-      rating: 1,
-      totalCopies: 1,
-      coverUrl: "",
-      coverColor: "",
-      videoUrl: "",
-      youtubeUrl: "",
-      summary: "",
+      title: book.title || "",
+      description: book.description || "",
+      author: book.author || "",
+      genre: book.genre || "",
+      rating: book.rating || 1,
+      totalCopies: book.totalCopies || 1,
+      coverUrl: book.coverUrl || "",
+      coverColor: book.coverColor || "",
+      videoUrl: book.videoUrl || "",
+      youtubeUrl: book.youtubeUrl || "",
+      summary: book.summary || "",
       // New book details
-      publisher: "",
-      publicationDate: "",
-      edition: "",
-      language: "",
-      printLength: "",
-      bookType: "",
-      isbn: "",
-      itemWeight: "",
-      dimensions: "",
-      aboutAuthor: "",
+      publisher: book.publisher || "",
+      publicationDate: book.publicationDate
+        ? new Date(book.publicationDate).toISOString().split("T")[0]
+        : "",
+      edition: book.edition || "",
+      language: book.language || "",
+      printLength: book.printLength?.toString() || "",
+      bookType: book.bookType || "",
+      isbn: book.isbn || "",
+      itemWeight: book.itemWeight?.toString() || "",
+      dimensions: book.dimensions || "",
+      aboutAuthor: book.aboutAuthor || "",
     },
   });
 
@@ -131,7 +133,12 @@ const BookForm = ({ type, ...book }: Props) => {
           : undefined,
     };
 
-    const result = await createBook(bookData);
+    let result;
+    if (type === "update" && book.id) {
+      result = await updateBook(book.id, bookData);
+    } else {
+      result = await createBook(bookData);
+    }
 
     if (result.success) {
       setShowSuccessDialog(true);
@@ -642,7 +649,7 @@ const BookForm = ({ type, ...book }: Props) => {
         />
 
         <Button type="submit" className="book-form_btn text-white">
-          Add Book to Library
+          {type === "update" ? "Update Book" : "Add Book to Library"}
         </Button>
       </form>
 
@@ -651,7 +658,9 @@ const BookForm = ({ type, ...book }: Props) => {
           <AlertDialogHeader>
             <AlertDialogTitle>Success!</AlertDialogTitle>
             <AlertDialogDescription>
-              Book has been added to the library successfully.
+              Book has been{" "}
+              {type === "update" ? "updated" : "added to the library"}{" "}
+              successfully.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

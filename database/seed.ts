@@ -38,23 +38,21 @@ const seed = async () => {
   console.log("Seeding data...");
 
   try {
+    // Check if books already exist
+    const existingBooks = await db.select().from(books).limit(1);
+    if (existingBooks.length > 0) {
+      console.log("Books already exist in database. Skipping seed.");
+      return;
+    }
+
     for (const book of dummyBooks) {
-      const coverUrl = (await uploadToImageKit(
-        book.coverUrl,
-        `${book.title}.jpg`,
-        "/books/covers"
-      )) as string;
-
-      const videoUrl = (await uploadToImageKit(
-        book.videoUrl,
-        `${book.title}.mp4`,
-        "/books/videos"
-      )) as string;
-
+      // Use the existing URLs directly since they're already valid ImageKit URLs
       await db.insert(books).values({
         ...book,
-        coverUrl,
-        videoUrl,
+        rating: book.rating.toString(), // Convert rating to string as expected by schema
+        // Use existing URLs as they are already valid
+        coverUrl: book.coverUrl,
+        videoUrl: book.videoUrl,
       });
     }
 
