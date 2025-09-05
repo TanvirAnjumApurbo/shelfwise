@@ -49,3 +49,27 @@ export const borrowBook = async (params: BorrowBookParams) => {
     };
   }
 };
+
+export const getUserBorrowedBooks = async (userId: string) => {
+  try {
+    const borrowedBooks = await db
+      .select({
+        book: books,
+        borrowRecord: borrowRecords,
+      })
+      .from(borrowRecords)
+      .innerJoin(books, eq(borrowRecords.bookId, books.id))
+      .where(eq(borrowRecords.userId, userId));
+
+    return {
+      success: true,
+      data: borrowedBooks,
+    };
+  } catch (error) {
+    console.log(error);
+    return {
+      success: false,
+      error: "An error occurred while fetching borrowed books",
+    };
+  }
+};
