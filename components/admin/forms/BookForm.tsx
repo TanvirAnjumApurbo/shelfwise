@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useState } from "react";
 
 import {
   Form,
@@ -21,6 +22,15 @@ import FileUpload from "@/components/FileUpload";
 import ColorPicker from "@/components/admin/ColorPicker";
 import { createBook } from "@/lib/admin/actions/book";
 import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Props extends Partial<Book> {
   type?: "create" | "update";
@@ -54,6 +64,7 @@ type BookFormInput = {
 
 const BookForm = ({ type, ...book }: Props) => {
   const router = useRouter();
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const form = useForm<BookFormInput>({
     resolver: zodResolver(bookSchema) as any,
@@ -123,12 +134,7 @@ const BookForm = ({ type, ...book }: Props) => {
     const result = await createBook(bookData);
 
     if (result.success) {
-      toast({
-        title: "Success",
-        description: "Book created successfully",
-      });
-
-      router.push(`/admin/books/${result.data.id}`);
+      setShowSuccessDialog(true);
     } else {
       toast({
         title: "Error",
@@ -136,6 +142,12 @@ const BookForm = ({ type, ...book }: Props) => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+    form.reset();
+    router.push("/admin/books");
   };
 
   return (
@@ -294,6 +306,7 @@ const BookForm = ({ type, ...book }: Props) => {
                 <ColorPicker
                   onPickerChange={field.onChange}
                   value={field.value}
+                  coverImageUrl={form.watch("coverUrl")}
                 />
               </FormControl>
               <FormMessage />
@@ -632,6 +645,25 @@ const BookForm = ({ type, ...book }: Props) => {
           Add Book to Library
         </Button>
       </form>
+
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Success!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Book has been added to the library successfully.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={handleSuccessDialogClose}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Form>
   );
 };
