@@ -20,18 +20,28 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   if (!bookDetails) redirect("/404");
 
+  // Check if there's any video content (either ImageKit or YouTube)
+  const hasVideo =
+    (bookDetails.videoUrl && bookDetails.videoUrl.trim()) ||
+    (bookDetails.youtubeUrl && bookDetails.youtubeUrl.trim());
+
   return (
     <>
       <BookOverview {...bookDetails} userId={session?.user?.id as string} />
 
       <div className="book-details">
         <div className="flex-[1.5]">
-          <section className="flex flex-col gap-7">
-            <h3>Video</h3>
+          {hasVideo && (
+            <section className="flex flex-col gap-7">
+              <h3>Video</h3>
+              <BookVideo
+                videoUrl={bookDetails.videoUrl}
+                youtubeUrl={bookDetails.youtubeUrl}
+              />
+            </section>
+          )}
 
-            <BookVideo videoUrl={bookDetails.videoUrl} />
-          </section>
-          <section className="mt-10 flex flex-col gap-7">
+          <section className={`${hasVideo ? "mt-10" : ""} flex flex-col gap-7`}>
             <h3>Summary</h3>
 
             <div className="space-y-5 text-xl text-light-100">

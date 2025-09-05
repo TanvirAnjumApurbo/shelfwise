@@ -9,7 +9,8 @@ interface Book {
   description: string;
   coverColor: string;
   coverUrl: string;
-  videoUrl: string;
+  videoUrl: string | null;
+  youtubeUrl: string | null;
   summary: string;
   createdAt: Date | null;
 }
@@ -31,7 +32,8 @@ interface BookParams {
   coverColor: string;
   description: string;
   totalCopies: number;
-  videoUrl: string;
+  videoUrl?: string;
+  youtubeUrl?: string;
   summary: string;
 }
 

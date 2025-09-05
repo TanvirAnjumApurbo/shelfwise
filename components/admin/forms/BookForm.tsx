@@ -26,11 +26,26 @@ interface Props extends Partial<Book> {
   type?: "create" | "update";
 }
 
+// Create a form type that accepts both string and number for form fields
+type BookFormInput = {
+  title: string;
+  description: string;
+  author: string;
+  genre: string;
+  rating: string | number;
+  totalCopies: string | number;
+  coverUrl: string;
+  coverColor: string;
+  summary: string;
+  videoUrl?: string;
+  youtubeUrl?: string;
+};
+
 const BookForm = ({ type, ...book }: Props) => {
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof bookSchema>>({
-    resolver: zodResolver(bookSchema),
+  const form = useForm<BookFormInput>({
+    resolver: zodResolver(bookSchema) as any,
     defaultValues: {
       title: "",
       description: "",
@@ -41,12 +56,20 @@ const BookForm = ({ type, ...book }: Props) => {
       coverUrl: "",
       coverColor: "",
       videoUrl: "",
+      youtubeUrl: "",
       summary: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof bookSchema>) => {
-    const result = await createBook(values);
+  const onSubmit = async (values: BookFormInput) => {
+    // Convert to the expected schema type
+    const bookData: z.infer<typeof bookSchema> = {
+      ...values,
+      rating: Number(values.rating),
+      totalCopies: Number(values.totalCopies),
+    };
+
+    const result = await createBook(bookData);
 
     if (result.success) {
       toast({
@@ -143,6 +166,7 @@ const BookForm = ({ type, ...book }: Props) => {
                   max={5}
                   placeholder="Book rating"
                   {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
                   className="book-form_input"
                 />
               </FormControl>
@@ -166,6 +190,7 @@ const BookForm = ({ type, ...book }: Props) => {
                   max={10000}
                   placeholder="Total copies"
                   {...field}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
                   className="book-form_input"
                 />
               </FormControl>
@@ -243,13 +268,13 @@ const BookForm = ({ type, ...book }: Props) => {
           render={({ field }) => (
             <FormItem className="flex flex-col gap-1">
               <FormLabel className="text-base font-normal text-dark-500">
-                Book Trailer
+                Book Trailer (ImageKit Video) - Optional
               </FormLabel>
               <FormControl>
                 <FileUpload
                   type="video"
                   accept="video/*"
-                  placeholder="Upload a book trailer"
+                  placeholder="Upload a book trailer (optional)"
                   folder="books/videos"
                   variant="light"
                   onFileChange={field.onChange}
@@ -260,6 +285,31 @@ const BookForm = ({ type, ...book }: Props) => {
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name={"youtubeUrl"}
+          render={({ field }) => (
+            <FormItem className="flex flex-col gap-1">
+              <FormLabel className="text-base font-normal text-dark-500">
+                YouTube Video URL - Optional
+              </FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=... (optional)"
+                  {...field}
+                  className="book-form_input"
+                />
+              </FormControl>
+              <FormMessage />
+              <p className="text-sm text-gray-500">
+                Enter a YouTube video URL as an alternative to uploading a video
+                file. If both are provided, YouTube URL will take priority.
+              </p>
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name={"summary"}
