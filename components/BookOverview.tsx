@@ -1,5 +1,6 @@
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import BookCover from "@/components/BookCover";
 import BorrowBook from "@/components/BorrowBook";
 import { db } from "@/database/drizzle";
@@ -38,7 +39,9 @@ const BookOverview = async ({
   return (
     <section className="book-overview">
       <div className="flex flex-1 flex-col gap-5">
-        <h1>{title}</h1>
+        <Link href={`/books/${id}`} className="cursor-pointer">
+          <h1 className="hover:text-light-200 transition-colors">{title}</h1>
+        </Link>
 
         <div className="book-info">
           <p>
@@ -77,8 +80,11 @@ const BookOverview = async ({
         )}
       </div>
 
-      <div className="relative flex flex-1 justify-center">
-        <div className="relative">
+      <Link
+        href={`/books/${id}`}
+        className="relative flex flex-1 justify-center cursor-pointer group"
+      >
+        <div className="relative transition-transform group-hover:scale-105">
           <BookCover
             variant="wide"
             className="z-10"
@@ -94,7 +100,7 @@ const BookOverview = async ({
             />
           </div>
         </div>
-      </div>
+      </Link>
     </section>
   );
 };
