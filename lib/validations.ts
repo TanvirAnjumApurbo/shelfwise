@@ -107,3 +107,8 @@ export const bookSchema = z.object({
   dimensions: z.string().trim().optional(),
   aboutAuthor: z.string().trim().max(1000).optional(),
 });
+
+export const reviewSchema = z.object({
+  rating: z.coerce.number().min(1).max(5).int(),
+  comment: z.string().trim().min(5).max(1000),
+});

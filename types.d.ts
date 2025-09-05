@@ -63,3 +63,28 @@ interface BorrowBookParams {
   bookId: string;
   userId: string;
 }
+
+interface ReviewParams {
+  userId: string;
+  bookId: string;
+  rating: number;
+  comment: string;
+}
+
+interface Review {
+  id: string;
+  userId: string;
+  bookId: string;
+  rating: number;
+  comment: string;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
+
+interface ReviewWithUser {
+  review: Review;
+  user: {
+    fullName: string;
+    universityId: number;
+  };
+}

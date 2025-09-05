@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import BookOverview from "@/components/BookOverview";
 import BookVideo from "@/components/BookVideo";
+import BookReviews from "@/components/BookReviews";
 import { convertDatabaseBookToBook, DatabaseBook } from "@/lib/utils/book";
+import { getBookReviews, getUserReviewForBook } from "@/lib/actions/book";
 
 const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const id = (await params).id;
@@ -28,6 +30,17 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const hasVideo =
     (bookData.videoUrl && bookData.videoUrl.trim()) ||
     (bookData.youtubeUrl && bookData.youtubeUrl.trim());
+
+  // Fetch reviews for this book
+  const reviewsResult = await getBookReviews(id);
+  const reviews = reviewsResult.success ? reviewsResult.data : [];
+
+  // Fetch user's review if logged in
+  let userReview = null;
+  if (session?.user?.id) {
+    const userReviewResult = await getUserReviewForBook(session.user.id, id);
+    userReview = userReviewResult.success ? userReviewResult.data : null;
+  }
 
   return (
     <>
@@ -145,6 +158,14 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
               ))}
             </div>
           </section>
+
+          {/* Reviews Section */}
+          <BookReviews
+            bookId={id}
+            userId={session?.user?.id as string}
+            reviews={reviews || []}
+            userReview={userReview}
+          />
         </div>
 
         {/*  SIMILAR*/}
