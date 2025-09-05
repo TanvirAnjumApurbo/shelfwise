@@ -2,12 +2,13 @@ import BookList from "@/components/BookList";
 import { db } from "@/database/drizzle";
 import { books } from "@/database/schema";
 import { desc } from "drizzle-orm";
+import { convertDatabaseBooksToBooks, DatabaseBook } from "@/lib/utils/book";
 
 const AllBooksPage = async () => {
   const allBooks = (await db
     .select()
     .from(books)
-    .orderBy(desc(books.createdAt))) as Book[];
+    .orderBy(desc(books.createdAt))) as DatabaseBook[];
 
   return (
     <div className="space-y-8">
@@ -18,7 +19,11 @@ const AllBooksPage = async () => {
         </p>
       </div>
 
-      <BookList title="" books={allBooks} containerClassName="mt-8" />
+      <BookList
+        title=""
+        books={convertDatabaseBooksToBooks(allBooks)}
+        containerClassName="mt-8"
+      />
     </div>
   );
 };

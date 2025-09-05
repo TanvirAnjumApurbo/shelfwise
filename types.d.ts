@@ -12,6 +12,17 @@ interface Book {
   videoUrl: string | null;
   youtubeUrl: string | null;
   summary: string;
+  // New book details
+  publisher: string | null;
+  publicationDate: Date | null;
+  edition: string | null;
+  language: string | null;
+  printLength: number | null;
+  bookType: string | null; // paperback/hardcover
+  isbn: string | null;
+  itemWeight: number | null; // in pounds
+  dimensions: string | null; // in inches
+  aboutAuthor: string | null;
   createdAt: Date | null;
 }
 
@@ -35,6 +46,17 @@ interface BookParams {
   videoUrl?: string;
   youtubeUrl?: string;
   summary: string;
+  // New book details
+  publisher?: string;
+  publicationDate?: string;
+  edition?: string;
+  language?: string;
+  printLength?: number;
+  bookType?: string;
+  isbn?: string;
+  itemWeight?: number;
+  dimensions?: string;
+  aboutAuthor?: string;
 }
 
 interface BorrowBookParams {
