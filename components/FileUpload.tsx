@@ -6,6 +6,7 @@ import Image from "next/image";
 import config from "@/lib/config";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 const {
   env: {
@@ -61,6 +62,9 @@ const FileUpload = ({
     value ? { filePath: value } : null
   );
 
+  // Progress state for upload progress tracking
+  const [progress, setProgress] = useState<number>(0);
+
   const styles = {
     button:
       variant === "dark"
@@ -79,6 +83,9 @@ const FileUpload = ({
   };
 
   const onSuccess = (res: any) => {
+    // Reset progress after successful upload
+    setProgress(100);
+
     // ImageKit returns 'filePath' (camelCase). Old code used 'filepath' which is undefined.
     let rawPath: string | undefined = res.filePath || res.filepath || res?.path;
 
@@ -108,6 +115,9 @@ const FileUpload = ({
     toast.success(`${type} uploaded successfully`, {
       description: `${normalizedPath} uploaded successfully!`,
     });
+
+    // Reset progress after a short delay to show completion
+    setTimeout(() => setProgress(0), 1000);
   };
 
   const onValidate = (file: File) => {
@@ -143,12 +153,12 @@ const FileUpload = ({
         onSuccess={onSuccess}
         useUniqueFileName={true}
         validateFile={onValidate}
-        // onUploadStart={() => setProgress(0)}
-        // onUploadProgress={({ loaded, total }) => {
-        //   const percent = Math.round((loaded / total) * 100);
+        onUploadStart={() => setProgress(0)}
+        onUploadProgress={({ loaded, total }) => {
+          const percent = Math.round((loaded / total) * 100);
 
-        //   setProgress(percent);
-        // }}
+          setProgress(percent);
+        }}
         folder={folder}
         accept={accept}
         className="hidden"
@@ -179,13 +189,14 @@ const FileUpload = ({
           <p className={cn("upload-filename", styles.text)}>{file.filePath}</p>
         )}
       </button>
-      {/* {progress > 0 && progress !== 100 && (
-        <div className="w-full rounded-full bg-green-200">
-          <div className="progress" style={{ width: `${progress}%` }}>
-            {progress}%
-          </div>
+
+      {progress > 0 && progress < 100 && (
+        <div className="w-full mt-2">
+          <Progress value={progress} className="w-full" />
+          <p className="text-sm text-center mt-1">{progress}%</p>
         </div>
-      )} */}
+      )}
+
       {file &&
         (type === "image" ? (
           <IKImage
