@@ -60,6 +60,7 @@ type BookFormInput = {
   itemWeight?: string | number;
   dimensions?: string;
   aboutAuthor?: string;
+  price?: string | number;
 };
 
 const BookForm = ({ type = "create", ...book }: Props) => {
@@ -93,6 +94,7 @@ const BookForm = ({ type = "create", ...book }: Props) => {
       itemWeight: book.itemWeight?.toString() || "",
       dimensions: book.dimensions || "",
       aboutAuthor: book.aboutAuthor || "",
+      price: book.price?.toString() || "",
     },
   });
 
@@ -131,6 +133,7 @@ const BookForm = ({ type = "create", ...book }: Props) => {
         values.aboutAuthor && values.aboutAuthor.trim()
           ? values.aboutAuthor
           : undefined,
+      price: values.price ? Number(values.price) : undefined,
     };
 
     let result;
@@ -539,6 +542,34 @@ const BookForm = ({ type = "create", ...book }: Props) => {
                     />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name={"price"}
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1">
+                  <FormLabel className="text-base font-normal text-dark-500">
+                    Price ($)
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0.01}
+                      step={0.01}
+                      placeholder="Book price for penalty calculations"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="book-form_input"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  <p className="text-sm text-gray-500">
+                    This price will be used for penalty calculations if the book
+                    is not returned on time.
+                  </p>
                 </FormItem>
               )}
             />

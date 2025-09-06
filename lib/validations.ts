@@ -106,6 +106,7 @@ export const bookSchema = z.object({
   itemWeight: z.coerce.number().positive().optional(),
   dimensions: z.string().trim().optional(),
   aboutAuthor: z.string().trim().max(1000).optional(),
+  price: z.coerce.number().positive().optional(),
 });
 
 export const reviewSchema = z.object({

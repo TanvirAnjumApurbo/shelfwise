@@ -32,6 +32,7 @@ export const createBook = async (params: BookParams) => {
         itemWeight: params.itemWeight?.toString() || null,
         dimensions: params.dimensions || null,
         aboutAuthor: params.aboutAuthor || null,
+        price: params.price?.toString() || null,
       })
       .returning();
 
@@ -112,6 +113,8 @@ export const updateBook = async (
       updateData.dimensions = params.dimensions || null;
     if (params.aboutAuthor !== undefined)
       updateData.aboutAuthor = params.aboutAuthor || null;
+    if (params.price !== undefined)
+      updateData.price = params.price?.toString() || null;
 
     const updatedBook = await db
       .update(books)

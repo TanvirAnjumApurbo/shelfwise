@@ -61,6 +61,7 @@ export const books = pgTable("books", {
   itemWeight: numeric("item_weight", { precision: 5, scale: 2 }), // in pounds
   dimensions: varchar("dimensions", { length: 50 }), // in inches (e.g., "8.5 x 11 x 1.2")
   aboutAuthor: text("about_author"),
+  price: numeric("price", { precision: 10, scale: 2 }), // price for penalty calculations
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

@@ -23,6 +23,7 @@ interface Book {
   itemWeight: number | null; // in pounds
   dimensions: string | null; // in inches
   aboutAuthor: string | null;
+  price: number | null; // price for penalty calculations
   createdAt: Date | null;
 }
 
@@ -57,6 +58,7 @@ interface BookParams {
   itemWeight?: number;
   dimensions?: string;
   aboutAuthor?: string;
+  price?: number;
 }
 
 interface BorrowBookParams {
