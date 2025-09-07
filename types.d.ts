@@ -27,6 +27,33 @@ interface Book {
   createdAt: Date | null;
 }
 
+// NextAuth type extensions
+declare module "next-auth" {
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  }
+
+  interface Session {
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    name: string;
+    role: string;
+  }
+}
+
 interface AuthCredentials {
   fullName: string;
   email: string;

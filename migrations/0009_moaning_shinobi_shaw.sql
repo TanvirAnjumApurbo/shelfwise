@@ -1,0 +1,1 @@
+ALTER TABLE "borrow_requests" ADD CONSTRAINT "borrow_requests_idempotency_key_unique" UNIQUE("idempotency_key");

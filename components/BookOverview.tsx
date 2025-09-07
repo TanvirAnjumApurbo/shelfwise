@@ -2,7 +2,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import BookCover from "@/components/BookCover";
-import BorrowBook from "@/components/BorrowBook";
+import BorrowBookEnhanced from "@/components/BorrowBookEnhanced";
 import { db } from "@/database/drizzle";
 import { users } from "@/database/schema";
 import { eq } from "drizzle-orm";
@@ -72,10 +72,12 @@ const BookOverview = async ({
         <p className="book-description">{description}</p>
 
         {user && (
-          <BorrowBook
+          <BorrowBookEnhanced
             bookId={id}
             userId={userId}
+            bookTitle={title}
             borrowingEligibility={borrowingEligibility}
+            availableCopies={availableCopies}
           />
         )}
       </div>

@@ -25,6 +25,20 @@
   .hide-scrollbar::-webkit-scrollbar-thumb:hover {
     background: transparent;
   }
+
+  /* Ensure toasts appear above all modals */
+  [data-sonner-toaster] {
+    z-index: 999999 !important;
+  }
+
+  [data-sonner-toast] {
+    z-index: 999999 !important;
+  }
+
+  .toast-above-modal {
+    z-index: 999999 !important;
+    position: fixed !important;
+  }
 }
 
 @layer components {

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { getUserBorrowedBooks } from "@/lib/actions/book";
 import BorrowedBookCard from "@/components/BorrowedBookCard";
 import { redirect } from "next/navigation";
+import { convertDatabaseBookToBook } from "@/lib/utils/book";
 
 const MyBooksPage = async () => {
   const session = await auth();
@@ -24,10 +25,17 @@ const MyBooksPage = async () => {
   }
 
   const borrowedBooks = result.data || [];
-  const activeBorrows = borrowedBooks.filter(
+
+  // Convert database books to proper Book type
+  const convertedBorrowedBooks = borrowedBooks.map((item) => ({
+    ...item,
+    book: convertDatabaseBookToBook(item.book),
+  }));
+
+  const activeBorrows = convertedBorrowedBooks.filter(
     (item) => item.borrowRecord.status === "BORROWED"
   );
-  const returnedBooks = borrowedBooks.filter(
+  const returnedBooks = convertedBorrowedBooks.filter(
     (item) => item.borrowRecord.status === "RETURNED"
   );
 
@@ -42,7 +50,7 @@ const MyBooksPage = async () => {
         </p>
       </div>
 
-      {borrowedBooks.length === 0 ? (
+      {convertedBorrowedBooks.length === 0 ? (
         <div className="text-center py-20">
           <div className="mx-auto mb-6 w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center">
             <svg

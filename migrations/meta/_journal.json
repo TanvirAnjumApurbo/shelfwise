@@ -36,6 +36,41 @@
       "when": 1757143317176,
       "tag": "0004_high_doctor_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1757148457393,
+      "tag": "0005_volatile_magma",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1757150108835,
+      "tag": "0006_mature_menace",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1757153845853,
+      "tag": "0007_peaceful_winter_soldier",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1757231469421,
+      "tag": "0008_low_night_thrasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1757232331091,
+      "tag": "0009_moaning_shinobi_shaw",
+      "breakpoints": true
     }
   ]
 }

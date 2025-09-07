@@ -8,6 +8,7 @@ import {
   pgEnum,
   timestamp,
   numeric,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 export const STATUS_ENUM = pgEnum("status", [
@@ -20,6 +21,17 @@ export const BORROW_STATUS_ENUM = pgEnum("borrow_status", [
   "BORROWED",
   "RETURNED",
 ]);
+
+export const REQUEST_STATUS_ENUM = pgEnum("request_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "CANCELLED",
+  "RETURN_PENDING",
+  "RETURNED",
+]);
+
+export const REQUEST_TYPE_ENUM = pgEnum("request_type", ["BORROW", "RETURN"]);
 
 export const users = pgTable("users", {
   id: uuid("id").notNull().primaryKey().defaultRandom().unique(),
@@ -47,6 +59,7 @@ export const books = pgTable("books", {
   description: text("description").notNull(),
   totalCopies: integer("total_copies").notNull().default(1),
   availableCopies: integer("available_copies").notNull().default(0),
+  reserveOnRequest: boolean("reserve_on_request").notNull().default(true),
   videoUrl: text("video_url"),
   youtubeUrl: text("youtube_url"),
   summary: varchar("summary").notNull(),
@@ -94,4 +107,102 @@ export const reviews = pgTable("reviews", {
   comment: text("comment").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// New table for borrow requests
+export const borrowRequests = pgTable("borrow_requests", {
+  id: uuid("id").notNull().primaryKey().defaultRandom().unique(),
+  userId: uuid("user_id")
+    .references(() => users.id)
+    .notNull(),
+  bookId: uuid("book_id")
+    .references(() => books.id)
+    .notNull(),
+  status: REQUEST_STATUS_ENUM("status").default("PENDING").notNull(),
+  requestedAt: timestamp("requested_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  dueDate: date("due_date"), // Set when approved
+  borrowRecordId: uuid("borrow_record_id").references(() => borrowRecords.id),
+  adminNotes: text("admin_notes"),
+  idempotencyKey: varchar("idempotency_key", { length: 255 }).unique(), // For request deduplication - unique constraint added
+  meta: text("meta"), // JSON metadata
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// New table for return requests
+export const returnRequests = pgTable("return_requests", {
+  id: uuid("id").notNull().primaryKey().defaultRandom().unique(),
+  userId: uuid("user_id")
+    .references(() => users.id)
+    .notNull(),
+  bookId: uuid("book_id")
+    .references(() => books.id)
+    .notNull(),
+  borrowRecordId: uuid("borrow_record_id")
+    .references(() => borrowRecords.id)
+    .notNull(),
+  status: REQUEST_STATUS_ENUM("status").default("PENDING").notNull(),
+  requestedAt: timestamp("requested_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  rejectedAt: timestamp("rejected_at", { withTimezone: true }),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// Table for notification preferences
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: uuid("id").notNull().primaryKey().defaultRandom().unique(),
+  userId: uuid("user_id")
+    .references(() => users.id)
+    .notNull(),
+  bookId: uuid("book_id")
+    .references(() => books.id)
+    .notNull(),
+  notifyOnAvailable: boolean("notify_on_available").default(true).notNull(),
+  notifiedAt: timestamp("notified_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// Audit log enums and table
+export const AUDIT_ACTION_ENUM = pgEnum("audit_action", [
+  "BORROW_REQUEST_CREATED",
+  "BORROW_REQUEST_APPROVED",
+  "BORROW_REQUEST_REJECTED",
+  "RETURN_REQUEST_CREATED",
+  "RETURN_REQUEST_APPROVED",
+  "RETURN_REQUEST_REJECTED",
+  "BOOK_BORROWED",
+  "BOOK_RETURNED",
+  "INVENTORY_UPDATED",
+  "USER_LOGIN",
+  "USER_LOGOUT",
+  "ADMIN_ACTION",
+]);
+
+export const AUDIT_ACTOR_TYPE_ENUM = pgEnum("audit_actor_type", [
+  "USER",
+  "ADMIN",
+  "SYSTEM",
+]);
+
+// Audit log table for tracking all actions
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").notNull().primaryKey().defaultRandom().unique(),
+  action: AUDIT_ACTION_ENUM("action").notNull(),
+  actorType: AUDIT_ACTOR_TYPE_ENUM("actor_type").notNull(),
+  actorId: uuid("actor_id").references(() => users.id), // Null for SYSTEM actions
+  targetUserId: uuid("target_user_id").references(() => users.id), // User being acted upon
+  targetBookId: uuid("target_book_id").references(() => books.id), // Book being acted upon
+  targetRequestId: uuid("target_request_id"), // Generic request ID (borrow/return)
+  metadata: text("metadata"), // JSON metadata with additional context
+  ipAddress: varchar("ip_address", { length: 45 }), // Support IPv6
+  userAgent: varchar("user_agent", { length: 500 }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });

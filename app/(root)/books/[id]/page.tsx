@@ -15,13 +15,15 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const session = await auth();
 
   // Fetch data based on id
-  const [bookDetails] = (await db
+  const bookResult = await db
     .select()
     .from(books)
     .where(eq(books.id, id))
-    .limit(1)) as [DatabaseBook];
+    .limit(1);
 
-  if (!bookDetails) redirect("/404");
+  if (bookResult.length === 0) redirect("/404");
+
+  const bookDetails = bookResult[0] as DatabaseBook;
 
   // Convert rating from string to number (since it's stored as numeric in DB)
   const bookData = convertDatabaseBookToBook(bookDetails);

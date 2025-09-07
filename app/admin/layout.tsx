@@ -10,14 +10,17 @@ import { eq } from "drizzle-orm";
 
 const Layout = async ({ children }: { children: ReactNode }) => {
   const session = await auth();
+
   if (!session?.user?.id) redirect("/sign-in");
 
-  const isAdmin = await db
-    .select({ isAdmin: users.role })
+  // Check if user is admin - database check for role verification
+  const dbRoleCheck = await db
+    .select({ role: users.role })
     .from(users)
     .where(eq(users.id, session.user.id))
-    .limit(1)
-    .then((res) => res[0]?.isAdmin === "ADMIN");
+    .limit(1);
+
+  const isAdmin = dbRoleCheck[0]?.role === "ADMIN";
 
   if (!isAdmin) redirect("/");
 

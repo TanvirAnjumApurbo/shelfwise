@@ -24,6 +24,7 @@ export interface DatabaseBook {
   itemWeight: string | null; // numeric type returns as string
   dimensions: string | null;
   aboutAuthor: string | null;
+  price: string | null; // numeric type returns as string
   createdAt: Date | null;
 }
 
@@ -39,6 +40,7 @@ export function convertDatabaseBookToBook(dbBook: DatabaseBook): Book {
     publicationDate: dbBook.publicationDate
       ? new Date(dbBook.publicationDate)
       : null,
+    price: dbBook.price ? Number(dbBook.price) : null,
   };
 }
 
