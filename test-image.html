@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Test</title>
+</head>
+<body>
+    <h1>Image Loading Test</h1>
+    
+    <h2>Test with placeholder images:</h2>
+    <img src="https://via.placeholder.com/600x400/0000FF/FFFFFF?text=University+ID+Card" 
+         alt="Test Image 1" 
+         style="width: 300px; height: 200px; border: 1px solid #ccc; margin: 10px;">
+    
+    <img src="https://picsum.photos/600/400" 
+         alt="Test Image 2" 
+         style="width: 300px; height: 200px; border: 1px solid #ccc; margin: 10px;">
+    
+    <img src="https://placehold.co/600x400/png" 
+         alt="Test Image 3" 
+         style="width: 300px; height: 200px; border: 1px solid #ccc; margin: 10px;">
+    
+    <h2>Test with broken URL:</h2>
+    <img src="https://example.com/nonexistent.jpg" 
+         alt="Broken Image" 
+         style="width: 300px; height: 200px; border: 1px solid #ccc; margin: 10px;"
+         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDYwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxyZWN0IHg9IjE1MCIgeT0iMTAwIiB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgcng9IjEwIiBmaWxsPSIjRTVFN0VCIiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iMiIvPgo8dGV4dCB4PSIzMDAiIHk9IjE4MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4IiBmaWxsPSIjNkI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5Vbml2ZXJzaXR5IElEIENhcmQ8L3RleHQ+Cjx0ZXh0IHg9IjMwMCIgeT0iMjEwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5Q0EzQUYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkltYWdlIG5vdCBhdmFpbGFibGU8L3RleHQ+Cjwvc3ZnPgo=';">
+    
+    <p>This test page helps verify that image loading works in the browser. You can open this file directly or serve it through the Next.js public folder.</p>
+</body>
+</html>

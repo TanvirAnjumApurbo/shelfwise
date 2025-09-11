@@ -73,24 +73,36 @@ const BorrowBook = ({
         if (borrowStatus.success && borrowStatus.data) {
           if (borrowStatus.data.type === "BORROW_REQUEST") {
             setButtonState("REQUEST_PENDING");
+          } else if (borrowStatus.data.type === "RETURN_PENDING") {
+            // Optimistically set to RETURN_PENDING, then verify there's an actual pending return request
+            setButtonState("RETURN_PENDING");
+            setBorrowRecordId(borrowStatus.data.borrowRecordId ?? null);
+            setDueDate(borrowStatus.data.dueDate ?? null);
+            try {
+              if (borrowStatus.data.borrowRecordId) {
+                const verify = await getUserReturnRequestStatus(
+                  userId,
+                  bookId,
+                  borrowStatus.data.borrowRecordId
+                );
+                if (!(verify.success && verify.data)) {
+                  // No active pending return request exists anymore -> treat as BORROWED
+                  setButtonState("BORROWED");
+                }
+              } else {
+                // Safety fallback: if no borrowRecordId we can't have a valid pending return
+                setButtonState("BORROWED");
+              }
+            } catch (e) {
+              // On verification failure, fall back to BORROWED to avoid locking user out
+              setButtonState("BORROWED");
+            }
           } else if (borrowStatus.data.type === "BORROWED") {
             setBorrowRecordId(borrowStatus.data.borrowRecordId ?? null);
             setDueDate(borrowStatus.data.dueDate ?? null);
-
-            // Check for return request
-            if (borrowStatus.data.borrowRecordId) {
-              const returnStatus = await getUserReturnRequestStatus(
-                userId,
-                bookId,
-                borrowStatus.data.borrowRecordId
-              );
-
-              if (returnStatus.success && returnStatus.data) {
-                setButtonState("RETURN_PENDING");
-              } else {
-                setButtonState("BORROWED");
-              }
-            }
+            // Always show BORROWED state - user can try return request again
+            // even if previous one was rejected
+            setButtonState("BORROWED");
           }
         } else if (availableCopies === 0) {
           setButtonState("NOTIFY_ME");
@@ -182,6 +194,7 @@ const BorrowBook = ({
         toast({
           title: "Return Request Sent!",
           description:
+            result.message ||
             "Your return request has been sent and is pending admin approval. You will be notified via email once it's processed.",
         });
         setButtonState("RETURN_PENDING");

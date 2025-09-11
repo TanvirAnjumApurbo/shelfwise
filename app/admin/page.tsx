@@ -4,6 +4,7 @@ import { BorrowRequestTable } from "@/components/admin/BorrowRequestTable";
 import { ReturnRequestTable } from "@/components/admin/ReturnRequestTable";
 import { getPendingBorrowRequests } from "@/lib/actions/borrow-request";
 import { getPendingReturnRequests } from "@/lib/actions/return-request-enhanced";
+import { getPendingAccountRequests } from "@/lib/actions/account-request";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
@@ -18,12 +19,16 @@ const AdminDashboard = async () => {
   // Fetch pending requests
   const borrowRequestsResult = await getPendingBorrowRequests();
   const returnRequestsResult = await getPendingReturnRequests();
+  const accountRequestsResult = await getPendingAccountRequests();
 
   const borrowRequests = borrowRequestsResult.success
     ? borrowRequestsResult.data
     : [];
   const returnRequests = returnRequestsResult.success
     ? returnRequestsResult.data
+    : [];
+  const accountRequests = accountRequestsResult.success
+    ? accountRequestsResult.data
     : [];
 
   return (
@@ -40,7 +45,35 @@ const AdminDashboard = async () => {
 
         <div className="space-y-8">
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600">
+                    Pending Account Requests
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {accountRequests?.length || 0}
+                  </p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <svg
+                    className="w-6 h-6 text-purple-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
                 <div className="flex-1">
@@ -104,7 +137,8 @@ const AdminDashboard = async () => {
                     Total Pending Actions
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {(borrowRequests?.length || 0) +
+                    {(accountRequests?.length || 0) +
+                      (borrowRequests?.length || 0) +
                       (returnRequests?.length || 0)}
                   </p>
                 </div>

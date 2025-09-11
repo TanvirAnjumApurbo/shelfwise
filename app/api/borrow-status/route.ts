@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/database/drizzle";
 import { borrowRequests } from "@/database/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,12 +50,17 @@ export async function GET(request: NextRequest) {
         and(
           eq(borrowRequests.userId, userId),
           eq(borrowRequests.bookId, bookId)
-          // Only get active statuses
-          // sql`status IN ('PENDING', 'APPROVED', 'RETURN_PENDING')`
         )
       )
-      .orderBy(borrowRequests.requestedAt)
+      .orderBy(desc(borrowRequests.requestedAt))
       .limit(1);
+
+    console.log(
+      `[BORROW-STATUS] Found ${borrowStatus.length} records for user ${userId}, book ${bookId}`
+    );
+    if (borrowStatus.length > 0) {
+      console.log(`[BORROW-STATUS] Latest record:`, borrowStatus[0]);
+    }
 
     if (!borrowStatus.length) {
       return NextResponse.json({
@@ -69,12 +74,17 @@ export async function GET(request: NextRequest) {
 
     // Only return if it's an active status
     if (!["PENDING", "APPROVED", "RETURN_PENDING"].includes(status.status)) {
+      console.log(
+        `[BORROW-STATUS] Status ${status.status} not in active list, returning null`
+      );
       return NextResponse.json({
         success: true,
         data: null,
         message: "No active borrow status found",
       });
     }
+
+    console.log(`[BORROW-STATUS] Returning active status:`, status.status);
 
     return NextResponse.json({
       success: true,

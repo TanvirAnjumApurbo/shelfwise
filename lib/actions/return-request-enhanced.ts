@@ -5,6 +5,7 @@ import {
   books,
   borrowRecords,
   returnRequests,
+  borrowRequests,
   users,
   auditLogs,
 } from "@/database/schema";
@@ -132,6 +133,7 @@ export const getPendingReturnRequests = async () => {
           title: books.title,
           author: books.author,
           coverUrl: books.coverUrl,
+          coverColor: books.coverColor,
         },
         borrowRecord: {
           borrowDate: borrowRecords.borrowDate,
@@ -247,6 +249,27 @@ export const approveReturnRequest = async (
         })
         .where(eq(books.id, request.bookId));
 
+      // Update corresponding borrow request (if any) from RETURN_PENDING -> RETURNED
+      // This keeps UI borrow-status endpoint consistent so button disappears / changes correctly
+      await tx
+        .update(borrowRequests)
+        .set({
+          status: "RETURNED",
+          meta: sql`COALESCE(meta, '') || ${JSON.stringify({
+            returnApprovedAt: returnedAt.toISOString(),
+            adminNotes,
+            linkedReturnRequestId: request.id,
+          })}`,
+        })
+        .where(
+          and(
+            eq(borrowRequests.userId, request.userId),
+            eq(borrowRequests.bookId, request.bookId),
+            // Only touch rows currently marked as RETURN_PENDING to avoid mutating history
+            eq(borrowRequests.status, "RETURN_PENDING" as any)
+          )
+        );
+
       return { updatedRequest, updatedBorrowRecord };
     });
 
@@ -313,6 +336,7 @@ export const approveReturnRequest = async (
     }
 
     revalidatePath("/admin");
+    revalidatePath(`/books/${request.bookId}`);
     return {
       success: true,
       data: result.updatedRequest,
@@ -370,16 +394,39 @@ export const rejectReturnRequest = async (
       };
     }
 
-    // Update request status (keep APPROVED borrow status, log reason)
-    const [updatedRequest] = await db
-      .update(returnRequests)
-      .set({
-        status: "REJECTED",
-        rejectedAt: new Date(),
-        adminNotes: adminNotes,
-      })
-      .where(eq(returnRequests.id, requestId))
-      .returning();
+    const rejectionTime = new Date();
+    // Use transaction to also revert borrowRequests status from RETURN_PENDING -> APPROVED (borrow still active)
+    const [updatedRequest] = await db.transaction(async (tx) => {
+      const [uReq] = await tx
+        .update(returnRequests)
+        .set({
+          status: "REJECTED",
+          rejectedAt: rejectionTime,
+          adminNotes: adminNotes,
+        })
+        .where(eq(returnRequests.id, requestId))
+        .returning();
+
+      // Revert borrow request status (if it had been set to RETURN_PENDING by legacy flow)
+      await tx
+        .update(borrowRequests)
+        .set({
+          status: "APPROVED",
+          meta: sql`COALESCE(meta, '') || ${JSON.stringify({
+            returnRejectedAt: rejectionTime.toISOString(),
+            adminNotes,
+            linkedReturnRequestId: request.id,
+          })}`,
+        })
+        .where(
+          and(
+            eq(borrowRequests.userId, request.userId),
+            eq(borrowRequests.bookId, request.bookId),
+            eq(borrowRequests.status, "RETURN_PENDING" as any)
+          )
+        );
+      return [uReq];
+    });
 
     // Create audit log
     await createAuditLog({
@@ -441,6 +488,7 @@ export const rejectReturnRequest = async (
     }
 
     revalidatePath("/admin");
+    revalidatePath(`/books/${request.bookId}`);
     return {
       success: true,
       data: updatedRequest,

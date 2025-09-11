@@ -71,7 +71,6 @@ const BorrowBookEnhanced = ({
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState("");
   const [displayedBorrowCode, setDisplayedBorrowCode] = useState("");
-  const [displayedReturnCode, setDisplayedReturnCode] = useState("");
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [borrowErrorMessage, setBorrowErrorMessage] = useState("");
@@ -261,10 +260,15 @@ const BorrowBookEnhanced = ({
       return false; // Don't close dialog
     }
 
-    // Validate the confirmation code matches the displayed code
-    if (userCode.toUpperCase() !== displayedReturnCode.toUpperCase()) {
-      toast.error("Invalid code. Please try again.");
-      setReturnErrorMessage("Invalid code. Please try again.");
+    // Validate confirmation code (should be "return" or part of book title)
+    const userCodeLower = userCode.toLowerCase();
+    const bookTitleLower = bookTitle.toLowerCase();
+
+    if (userCodeLower !== "return" && !bookTitleLower.includes(userCodeLower)) {
+      toast.error("Please enter 'return' or part of the book title to confirm");
+      setReturnErrorMessage(
+        "Please enter 'return' or part of the book title to confirm"
+      );
       return false; // Don't close dialog
     }
 
@@ -301,7 +305,6 @@ const BorrowBookEnhanced = ({
         // Close dialog and reset state on success
         setShowReturnDialog(false);
         setConfirmationCode("");
-        setDisplayedReturnCode("");
         return true;
       } else {
         toast.error(data.error || "Failed to send return request");
@@ -429,7 +432,6 @@ const BorrowBookEnhanced = ({
         setShowBorrowDialog(true);
         break;
       case "BORROWED":
-        setDisplayedReturnCode(generateConfirmationCode());
         setShowReturnDialog(true);
         break;
       case "NOTIFY_ME":
@@ -564,30 +566,19 @@ const BorrowBookEnhanced = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Return Request</AlertDialogTitle>
             <AlertDialogDescription>
-              To confirm your return request for "{bookTitle}", please enter the
-              confirmation code shown below.
+              To confirm your return request for "{bookTitle}", please type
+              "return" or part of the book title below.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4">
-            <div className="bg-gray-100 p-4 rounded-lg text-center">
-              <Label className="text-sm text-gray-600">
-                Confirmation Code:
-              </Label>
-              <p className="text-2xl font-mono font-bold text-gray-900 mt-1">
-                {displayedReturnCode}
-              </p>
-            </div>
             <div>
-              <Label htmlFor="returnConfirmCode">Enter the code above:</Label>
+              <Label htmlFor="returnConfirmCode">Confirmation Text:</Label>
               <Input
                 id="returnConfirmCode"
                 value={confirmationCode}
-                onChange={(e) =>
-                  setConfirmationCode(e.target.value.toUpperCase())
-                }
-                placeholder="Enter confirmation code"
+                onChange={(e) => setConfirmationCode(e.target.value)}
+                placeholder="Type 'return' or part of book title"
                 className="mt-1"
-                maxLength={6}
               />
             </div>
             {returnErrorMessage && (
@@ -598,7 +589,6 @@ const BorrowBookEnhanced = ({
             <AlertDialogCancel
               onClick={() => {
                 setConfirmationCode("");
-                setDisplayedReturnCode("");
                 setReturnErrorMessage("");
               }}
             >

@@ -140,6 +140,7 @@ export const getPendingBorrowRequests = async () => {
           title: books.title,
           author: books.author,
           coverUrl: books.coverUrl,
+          coverColor: books.coverColor,
         },
       })
       .from(borrowRequests)

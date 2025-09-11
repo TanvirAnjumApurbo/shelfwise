@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/database/drizzle";
-import { borrowRequests, books, users } from "@/database/schema";
+import {
+  borrowRequests,
+  books,
+  users,
+  returnRequests,
+  borrowRecords,
+} from "@/database/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import ratelimit from "@/lib/ratelimit";
@@ -53,25 +59,22 @@ export async function POST(request: NextRequest) {
     const { borrowRequestId, confirmationCode, idempotencyKey } =
       validation.data;
 
-    // Check for existing request with same idempotency key
-    const existingIdempotentRequest = await db
+    // Check for existing return request with same idempotency key
+    const existingReturnRequest = await db
       .select()
-      .from(borrowRequests)
+      .from(returnRequests)
       .where(
         and(
-          eq(borrowRequests.userId, userId),
-          sql`meta LIKE ${`%${idempotencyKey}%`}`
+          eq(returnRequests.userId, userId),
+          sql`admin_notes LIKE ${`%${idempotencyKey}%`}`
         )
       )
       .limit(1);
 
-    if (
-      existingIdempotentRequest.length > 0 &&
-      existingIdempotentRequest[0].status === "RETURN_PENDING"
-    ) {
+    if (existingReturnRequest.length > 0) {
       return NextResponse.json({
         success: true,
-        data: existingIdempotentRequest[0],
+        data: existingReturnRequest[0],
         message: "Return request already processed",
       });
     }
@@ -83,6 +86,7 @@ export async function POST(request: NextRequest) {
         userId: borrowRequests.userId,
         bookId: borrowRequests.bookId,
         status: borrowRequests.status,
+        borrowRecordId: borrowRequests.borrowRecordId,
       })
       .from(borrowRequests)
       .where(
@@ -98,6 +102,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "No active borrow record found or you don't have permission" },
         { status: 404 }
+      );
+    }
+
+    // Ensure we have a borrow record ID
+    if (!borrowRequest[0].borrowRecordId) {
+      return NextResponse.json(
+        { error: "Invalid borrow record - missing borrow record ID" },
+        { status: 400 }
       );
     }
 
@@ -123,18 +135,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update the request status to RETURN_PENDING
-    const [updatedRequest] = await db
+    // Create the return request
+    const [newReturnRequest] = await db
+      .insert(returnRequests)
+      .values({
+        userId: userId,
+        bookId: borrowRequest[0].bookId,
+        borrowRecordId: borrowRequest[0].borrowRecordId!,
+        status: "PENDING",
+        adminNotes: JSON.stringify({
+          idempotencyKey: idempotencyKey,
+          confirmationCode: confirmationCode,
+        }),
+      })
+      .returning();
+
+    // Update the borrow request status to RETURN_PENDING
+    await db
       .update(borrowRequests)
       .set({
         status: "RETURN_PENDING",
         meta: sql`COALESCE(meta, '') || ${JSON.stringify({
+          returnRequestId: newReturnRequest.id,
           returnIdempotencyKey: idempotencyKey,
           returnConfirmationCode: confirmationCode,
         })}`,
       })
-      .where(eq(borrowRequests.id, borrowRequestId))
-      .returning();
+      .where(eq(borrowRequests.id, borrowRequestId));
 
     // Send notification to admins (optional)
     try {
@@ -162,11 +189,72 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: updatedRequest,
+      data: newReturnRequest,
       message: "Return request submitted successfully",
     });
   } catch (error) {
     console.error("Error creating return request:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    // Authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is admin
+    const user = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1);
+
+    if (!user.length || user[0].role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    // Get all return requests with user and book details
+    const returnRequestsData = await db
+      .select({
+        id: returnRequests.id,
+        userId: returnRequests.userId,
+        bookId: returnRequests.bookId,
+        borrowRecordId: returnRequests.borrowRecordId,
+        status: returnRequests.status,
+        requestedAt: returnRequests.requestedAt,
+        approvedAt: returnRequests.approvedAt,
+        rejectedAt: returnRequests.rejectedAt,
+        adminNotes: returnRequests.adminNotes,
+        createdAt: returnRequests.createdAt,
+        userFullName: users.fullName,
+        userEmail: users.email,
+        bookTitle: books.title,
+        bookAuthor: books.author,
+      })
+      .from(returnRequests)
+      .leftJoin(users, eq(returnRequests.userId, users.id))
+      .leftJoin(books, eq(returnRequests.bookId, books.id))
+      .orderBy(sql`${returnRequests.requestedAt} DESC`);
+
+    return NextResponse.json({
+      success: true,
+      data: returnRequestsData,
+    });
+  } catch (error) {
+    console.error("Error fetching return requests:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

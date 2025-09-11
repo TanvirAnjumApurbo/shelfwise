@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
+import BookCover from "@/components/BookCover";
 import {
   Table,
   TableBody,
@@ -50,6 +50,7 @@ interface BorrowRequest {
     title: string;
     author: string;
     coverUrl: string;
+    coverColor: string;
   };
 }
 
@@ -101,7 +102,7 @@ export const BorrowRequestTableEnhanced: React.FC<
           description:
             "Borrow request approved successfully. User has been notified via email.",
         });
-        
+
         // Auto-refresh the page to show updated data
         setTimeout(() => {
           router.refresh();
@@ -144,7 +145,7 @@ export const BorrowRequestTableEnhanced: React.FC<
           description:
             "Borrow request rejected. User has been notified via email.",
         });
-        
+
         // Auto-refresh the page to show updated data
         setTimeout(() => {
           router.refresh();
@@ -233,13 +234,13 @@ export const BorrowRequestTableEnhanced: React.FC<
                 <TableRow key={request.request.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <Image
-                        src={request.book.coverUrl}
-                        alt={request.book.title}
-                        width={40}
-                        height={60}
-                        className="rounded object-cover"
-                      />
+                      <div className="w-10 h-15">
+                        <BookCover
+                          coverColor={request.book.coverColor}
+                          coverImage={request.book.coverUrl}
+                          variant="extraSmall"
+                        />
+                      </div>
                       <div>
                         <p className="font-medium">{request.book.title}</p>
                         <p className="text-sm text-gray-500">

@@ -4,6 +4,7 @@ import { db } from "@/database/drizzle";
 import {
   books,
   borrowRecords,
+  borrowRequests,
   returnRequests,
   users,
   notificationPreferences,
@@ -30,7 +31,9 @@ interface RejectReturnRequestParams {
 }
 
 // Create a new return request
-export const createReturnRequest = async (params: CreateReturnRequestParams) => {
+export const createReturnRequest = async (
+  params: CreateReturnRequestParams
+) => {
   const { userId, bookId, borrowRecordId, confirmationText } = params;
 
   try {
@@ -72,16 +75,17 @@ export const createReturnRequest = async (params: CreateReturnRequestParams) => 
     // Simple validation - user must type "return" or the book title
     const bookTitle = book[0].title.toLowerCase();
     const confirmLower = confirmationText.toLowerCase();
-    
+
     if (confirmLower !== "return" && !bookTitle.includes(confirmLower)) {
       return {
         success: false,
-        error: "Confirmation text does not match. Please type 'return' or part of the book title.",
+        error:
+          "Confirmation text does not match. Please type 'return' or part of the book title.",
       };
     }
 
     // Check for existing pending return request
-    const existingRequest = await db
+    const existingPendingRequest = await db
       .select()
       .from(returnRequests)
       .where(
@@ -94,27 +98,99 @@ export const createReturnRequest = async (params: CreateReturnRequestParams) => 
       )
       .limit(1);
 
-    if (existingRequest.length > 0) {
+    if (existingPendingRequest.length > 0) {
       return {
         success: false,
         error: "You already have a pending return request for this book",
       };
     }
 
-    // Create the return request
-    const request = await db.insert(returnRequests).values({
-      userId,
-      bookId,
-      borrowRecordId,
-      status: "PENDING",
-    }).returning();
+    // Check if there's a recent rejected request (within last 24 hours)
+    // If so, inform user but still allow them to try again
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    const recentRejectedRequest = await db
+      .select()
+      .from(returnRequests)
+      .where(
+        and(
+          eq(returnRequests.userId, userId),
+          eq(returnRequests.bookId, bookId),
+          eq(returnRequests.borrowRecordId, borrowRecordId),
+          eq(returnRequests.status, "REJECTED"),
+          sql`${returnRequests.rejectedAt} > ${oneDayAgo.toISOString()}`
+        )
+      )
+      .limit(1);
+
+    // Find the corresponding borrow request to update its status
+    const borrowRequestRecord = await db
+      .select()
+      .from(borrowRequests)
+      .where(
+        and(
+          eq(borrowRequests.userId, userId),
+          eq(borrowRequests.bookId, bookId),
+          eq(borrowRequests.borrowRecordId, borrowRecordId),
+          eq(borrowRequests.status, "APPROVED")
+        )
+      )
+      .limit(1);
+
+    if (!borrowRequestRecord.length) {
+      return {
+        success: false,
+        error: "No corresponding borrow request found",
+      };
+    }
+
+    // Use transaction to ensure both operations succeed or fail together
+    const result = await db.transaction(async (tx) => {
+      // Create the return request
+      const [request] = await tx
+        .insert(returnRequests)
+        .values({
+          userId,
+          bookId,
+          borrowRecordId,
+          status: "PENDING",
+          adminNotes:
+            recentRejectedRequest.length > 0
+              ? JSON.stringify({
+                  resubmission: true,
+                  previousRejectionAt: recentRejectedRequest[0].rejectedAt,
+                })
+              : null,
+        })
+        .returning();
+
+      // Update the borrow request status to RETURN_PENDING
+      await tx
+        .update(borrowRequests)
+        .set({
+          status: "RETURN_PENDING",
+          meta: sql`COALESCE(meta, '') || ${JSON.stringify({
+            returnRequestId: request.id,
+            returnConfirmationText: confirmationText,
+            isResubmission: recentRejectedRequest.length > 0,
+          })}`,
+        })
+        .where(eq(borrowRequests.id, borrowRequestRecord[0].id));
+
+      return request;
+    });
 
     revalidatePath(`/books/${bookId}`);
     revalidatePath("/");
 
     return {
       success: true,
-      data: request[0],
+      data: result,
+      message:
+        recentRejectedRequest.length > 0
+          ? "Return request resubmitted successfully. Previous request was rejected, but you can try again."
+          : "Return request submitted successfully.",
     };
   } catch (error) {
     console.error("Error creating return request:", error);
@@ -126,7 +202,11 @@ export const createReturnRequest = async (params: CreateReturnRequestParams) => 
 };
 
 // Get user's return request status for a book
-export const getUserReturnRequestStatus = async (userId: string, bookId: string, borrowRecordId: string) => {
+export const getUserReturnRequestStatus = async (
+  userId: string,
+  bookId: string,
+  borrowRecordId: string
+) => {
   try {
     const returnRequest = await db
       .select()
@@ -165,6 +245,46 @@ export const getUserReturnRequestStatus = async (userId: string, bookId: string,
   }
 };
 
+// Check if user has any rejected return requests for this book
+export const hasRecentRejectedReturnRequest = async (
+  userId: string,
+  bookId: string,
+  borrowRecordId: string
+) => {
+  try {
+    // Check for rejected return requests in the last 24 hours
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    const rejectedRequest = await db
+      .select()
+      .from(returnRequests)
+      .where(
+        and(
+          eq(returnRequests.userId, userId),
+          eq(returnRequests.bookId, bookId),
+          eq(returnRequests.borrowRecordId, borrowRecordId),
+          eq(returnRequests.status, "REJECTED"),
+          sql`${returnRequests.rejectedAt} > ${oneDayAgo.toISOString()}`
+        )
+      )
+      .limit(1);
+
+    return {
+      success: true,
+      hasRecentRejection: rejectedRequest.length > 0,
+      data: rejectedRequest.length > 0 ? rejectedRequest[0] : null,
+    };
+  } catch (error) {
+    console.error("Error checking rejected return requests:", error);
+    return {
+      success: false,
+      hasRecentRejection: false,
+      error: "An error occurred while checking rejected requests",
+    };
+  }
+};
+
 // Admin: Get all pending return requests
 export const getPendingReturnRequests = async () => {
   try {
@@ -182,6 +302,7 @@ export const getPendingReturnRequests = async () => {
           title: books.title,
           author: books.author,
           coverUrl: books.coverUrl,
+          coverColor: books.coverColor,
         },
         borrowRecord: {
           borrowDate: borrowRecords.borrowDate,
@@ -191,7 +312,10 @@ export const getPendingReturnRequests = async () => {
       .from(returnRequests)
       .innerJoin(users, eq(returnRequests.userId, users.id))
       .innerJoin(books, eq(returnRequests.bookId, books.id))
-      .innerJoin(borrowRecords, eq(returnRequests.borrowRecordId, borrowRecords.id))
+      .innerJoin(
+        borrowRecords,
+        eq(returnRequests.borrowRecordId, borrowRecords.id)
+      )
       .where(eq(returnRequests.status, "PENDING"))
       .orderBy(desc(returnRequests.requestedAt));
 
@@ -209,7 +333,9 @@ export const getPendingReturnRequests = async () => {
 };
 
 // Admin: Approve return request
-export const approveReturnRequest = async (params: ApproveReturnRequestParams) => {
+export const approveReturnRequest = async (
+  params: ApproveReturnRequestParams
+) => {
   const { requestId, adminNotes } = params;
 
   try {
@@ -231,30 +357,52 @@ export const approveReturnRequest = async (params: ApproveReturnRequestParams) =
       };
     }
 
-    // Update the borrow record
-    await db
-      .update(borrowRecords)
-      .set({
-        status: "RETURNED",
-        returnDate: new Date().toDateString(),
-      })
-      .where(eq(borrowRecords.id, request[0].borrowRecordId));
+    // Use transaction to ensure all operations succeed together
+    await db.transaction(async (tx) => {
+      // Update the borrow record
+      await tx
+        .update(borrowRecords)
+        .set({
+          status: "RETURNED",
+          returnDate: new Date().toDateString(),
+        })
+        .where(eq(borrowRecords.id, request[0].borrowRecordId));
 
-    // Update the return request
-    await db
-      .update(returnRequests)
-      .set({
-        status: "APPROVED",
-        approvedAt: new Date(),
-        adminNotes,
-      })
-      .where(eq(returnRequests.id, requestId));
+      // Update the return request
+      await tx
+        .update(returnRequests)
+        .set({
+          status: "APPROVED",
+          approvedAt: new Date(),
+          adminNotes,
+        })
+        .where(eq(returnRequests.id, requestId));
 
-    // Increase available copies
-    await db
-      .update(books)
-      .set({ availableCopies: sql`${books.availableCopies} + 1` })
-      .where(eq(books.id, request[0].bookId));
+      // Update the corresponding borrow request status back to RETURNED
+      await tx
+        .update(borrowRequests)
+        .set({
+          status: "RETURNED",
+          meta: sql`COALESCE(meta, '') || ${JSON.stringify({
+            returnApprovedAt: new Date().toISOString(),
+            adminNotes,
+          })}`,
+        })
+        .where(
+          and(
+            eq(borrowRequests.userId, request[0].userId),
+            eq(borrowRequests.bookId, request[0].bookId),
+            eq(borrowRequests.borrowRecordId, request[0].borrowRecordId),
+            eq(borrowRequests.status, "RETURN_PENDING")
+          )
+        );
+
+      // Increase available copies
+      await tx
+        .update(books)
+        .set({ availableCopies: sql`${books.availableCopies} + 1` })
+        .where(eq(books.id, request[0].bookId));
+    });
 
     // Get user and book details for email
     const userDetails = await db
@@ -311,7 +459,9 @@ export const approveReturnRequest = async (params: ApproveReturnRequestParams) =
 };
 
 // Admin: Reject return request
-export const rejectReturnRequest = async (params: RejectReturnRequestParams) => {
+export const rejectReturnRequest = async (
+  params: RejectReturnRequestParams
+) => {
   const { requestId, adminNotes } = params;
 
   try {
@@ -320,6 +470,7 @@ export const rejectReturnRequest = async (params: RejectReturnRequestParams) => 
       .select({
         userId: returnRequests.userId,
         bookId: returnRequests.bookId,
+        borrowRecordId: returnRequests.borrowRecordId,
       })
       .from(returnRequests)
       .where(eq(returnRequests.id, requestId))
@@ -332,15 +483,37 @@ export const rejectReturnRequest = async (params: RejectReturnRequestParams) => 
       };
     }
 
-    // Update the return request
-    await db
-      .update(returnRequests)
-      .set({
-        status: "REJECTED",
-        rejectedAt: new Date(),
-        adminNotes,
-      })
-      .where(eq(returnRequests.id, requestId));
+    // Use transaction to ensure all operations succeed together
+    await db.transaction(async (tx) => {
+      // Update the return request
+      await tx
+        .update(returnRequests)
+        .set({
+          status: "REJECTED",
+          rejectedAt: new Date(),
+          adminNotes,
+        })
+        .where(eq(returnRequests.id, requestId));
+
+      // Update the corresponding borrow request status back to APPROVED
+      await tx
+        .update(borrowRequests)
+        .set({
+          status: "APPROVED",
+          meta: sql`COALESCE(meta, '') || ${JSON.stringify({
+            returnRejectedAt: new Date().toISOString(),
+            adminNotes,
+          })}`,
+        })
+        .where(
+          and(
+            eq(borrowRequests.userId, request[0].userId),
+            eq(borrowRequests.bookId, request[0].bookId),
+            eq(borrowRequests.borrowRecordId, request[0].borrowRecordId),
+            eq(borrowRequests.status, "RETURN_PENDING")
+          )
+        );
+    });
 
     // Get user and book details for email
     const userDetails = await db
@@ -369,7 +542,9 @@ export const rejectReturnRequest = async (params: RejectReturnRequestParams) => 
         message: `
           <h2>Return Request Rejected</h2>
           <p>Dear ${userDetails[0].fullName},</p>
-          <p>Your return request for "<strong>${bookDetails[0].title}</strong>" by ${bookDetails[0].author} has been rejected.</p>
+          <p>Your return request for "<strong>${
+            bookDetails[0].title
+          }</strong>" by ${bookDetails[0].author} has been rejected.</p>
           ${adminNotes ? `<p><strong>Reason:</strong> ${adminNotes}</p>` : ""}
           <p>Please visit the library or contact us for more information about returning this book.</p>
           <br>

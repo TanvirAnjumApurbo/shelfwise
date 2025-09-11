@@ -417,31 +417,75 @@ export const getUserBorrowRequestStatus = async (
   bookId: string
 ) => {
   try {
-    // Check for pending borrow request
-    const borrowRequest = await db
+    // Check for the most recent borrow request for this user and book
+    const allRequests = await db
       .select()
       .from(borrowRequests)
       .where(
         and(
           eq(borrowRequests.userId, userId),
-          eq(borrowRequests.bookId, bookId),
-          eq(borrowRequests.status, "PENDING")
+          eq(borrowRequests.bookId, bookId)
         )
       )
-      .limit(1);
+      .orderBy(desc(borrowRequests.requestedAt));
 
-    if (borrowRequest.length > 0) {
+    if (allRequests.length === 0) {
+      return {
+        success: true,
+        data: null,
+      };
+    }
+
+    // Find the most relevant request based on priority:
+    // 1. PENDING (highest priority - user has an active request)
+    // 2. APPROVED (user has borrowed the book)
+    // 3. RETURN_PENDING (user requested return, admin hasn't processed)
+
+    const pendingRequest = allRequests.find((req) => req.status === "PENDING");
+    const approvedRequest = allRequests.find(
+      (req) => req.status === "APPROVED"
+    );
+    const returnPendingRequest = allRequests.find(
+      (req) => req.status === "RETURN_PENDING"
+    );
+
+    if (pendingRequest) {
       return {
         success: true,
         data: {
           type: "BORROW_REQUEST",
-          status: borrowRequest[0].status,
-          requestId: borrowRequest[0].id,
+          status: pendingRequest.status,
+          requestId: pendingRequest.id,
         },
       };
     }
 
-    // Check for active borrow record
+    if (returnPendingRequest) {
+      return {
+        success: true,
+        data: {
+          type: "RETURN_PENDING",
+          status: "RETURN_PENDING",
+          requestId: returnPendingRequest.id,
+          borrowRecordId: returnPendingRequest.borrowRecordId,
+          dueDate: returnPendingRequest.dueDate,
+        },
+      };
+    }
+
+    if (approvedRequest) {
+      return {
+        success: true,
+        data: {
+          type: "BORROWED",
+          status: "BORROWED",
+          borrowRecordId: approvedRequest.borrowRecordId,
+          dueDate: approvedRequest.dueDate,
+        },
+      };
+    }
+
+    // Check for active borrow record (fallback)
     const borrowRecord = await db
       .select()
       .from(borrowRecords)
