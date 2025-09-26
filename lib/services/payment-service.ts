@@ -176,13 +176,11 @@ export const createPaymentIntent = async (
         userId,
         transactionId: transaction.id,
         fineIds: JSON.stringify(fineIds),
+        ...(returnUrl ? { returnUrl } : {}),
       },
       automatic_payment_methods: {
         enabled: true,
       },
-      ...(returnUrl && {
-        return_url: returnUrl,
-      }),
     });
 
     // Update transaction with Stripe payment intent ID
@@ -304,7 +302,11 @@ export const handleCheckoutSessionCompleted = async (
     const actualFineIds =
       fineIds.length > 0 ? fineIds : JSON.parse(transaction.fineIds);
 
+    let remainingPayment = totalAmountPaid;
+
     for (const fineId of actualFineIds) {
+      if (remainingPayment <= 0) break;
+
       const [fine] = await db
         .select()
         .from(fines)
@@ -315,10 +317,7 @@ export const handleCheckoutSessionCompleted = async (
 
       const outstandingAmount =
         Number(fine.amount) - Number(fine.paidAmount || 0);
-      const amountToApply = Math.min(
-        outstandingAmount,
-        totalAmountPaid / actualFineIds.length
-      );
+      const amountToApply = Math.min(outstandingAmount, remainingPayment);
 
       if (amountToApply <= 0) continue;
 
@@ -355,6 +354,8 @@ export const handleCheckoutSessionCompleted = async (
         .where(eq(users.id, fine.userId));
 
       console.log(`💳 Processed fine payment: ${fineId} -> $${amountToApply}`);
+
+      remainingPayment -= amountToApply;
     }
 
     // Update user restrictions if needed
@@ -450,8 +451,12 @@ export const completePayment = async (
       })
       .where(eq(paymentTransactions.id, transaction.id));
 
+    let remainingAmount = totalAmount;
+
     // Update fines and create payment records
     for (const fineId of fineIds) {
+      if (remainingAmount <= 0) break;
+
       const [fine] = await db
         .select()
         .from(fines)
@@ -462,10 +467,7 @@ export const completePayment = async (
 
       const outstandingAmount =
         Number(fine.amount) - Number(fine.paidAmount || 0);
-      const amountToPay = Math.min(
-        outstandingAmount,
-        totalAmount / fineIds.length
-      );
+      const amountToPay = Math.min(outstandingAmount, remainingAmount);
 
       if (amountToPay <= 0) continue;
 
@@ -500,6 +502,8 @@ export const completePayment = async (
           totalFinesOwed: sql`GREATEST(0, CAST(total_fines_owed AS DECIMAL) - ${amountToPay})`,
         })
         .where(eq(users.id, fine.userId));
+
+      remainingAmount -= amountToPay;
     }
 
     // Check if user restrictions should be updated

@@ -5,7 +5,7 @@ import { getUserFineStatus } from "@/lib/services/fine-service";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await auth();
@@ -17,7 +17,7 @@ export async function GET(
       );
     }
 
-    const { userId } = params;
+    const { userId } = await context.params;
 
     // Users can only access their own status, admins can access anyone's
     if (session.user.role !== "ADMIN" && session.user.id !== userId) {

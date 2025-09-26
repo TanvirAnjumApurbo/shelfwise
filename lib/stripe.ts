@@ -1,7 +1,15 @@
 import Stripe from "stripe";
 import config from "@/lib/config";
 
-export const stripe = new Stripe(config.env.stripe.secretKey, {
+const stripeSecretKey = config.env.stripe.secretKey;
+
+if (!stripeSecretKey) {
+  throw new Error(
+    "Missing STRIPE_SECRET_KEY. Add it to your environment to enable payments."
+  );
+}
+
+export const stripe = new Stripe(stripeSecretKey, {
   apiVersion: "2025-08-27.basil",
   typescript: true,
 });

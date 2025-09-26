@@ -127,9 +127,15 @@ export async function POST(request: NextRequest) {
       config.env.apiEndpoint ||
       process.env.NEXT_PUBLIC_ORIGIN ||
       "http://localhost:3000";
-    const successUrl =
+    let successUrl =
       returnUrl ||
       `${origin}/fines/payment/success?session_id={CHECKOUT_SESSION_ID}`;
+
+    if (!successUrl.includes("{CHECKOUT_SESSION_ID}")) {
+      successUrl += successUrl.includes("?")
+        ? "&session_id={CHECKOUT_SESSION_ID}"
+        : "?session_id={CHECKOUT_SESSION_ID}";
+    }
     const cancelUrl = `${origin}/fines/payment?canceled=true`;
 
     // Create Stripe Checkout Session

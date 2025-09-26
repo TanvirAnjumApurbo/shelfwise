@@ -2,7 +2,10 @@ import { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { stripe } from "@/lib/stripe";
-import { getPaymentTransaction } from "@/lib/services/payment-service";
+import {
+  getPaymentTransaction,
+  handleCheckoutSessionCompleted,
+} from "@/lib/services/payment-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -92,7 +95,37 @@ async function PaymentSuccessContent({
 
     if (transactionId) {
       const transactionResult = await getPaymentTransaction(transactionId);
-      if (transactionResult.success) {
+
+      if (
+        transactionResult.success &&
+        transactionResult.data?.status !== "COMPLETED" &&
+        checkoutSession.payment_status === "paid"
+      ) {
+        const metadata = checkoutSession.metadata
+          ? (checkoutSession.metadata as Record<string, string>)
+          : {};
+
+        const fallbackResult = await handleCheckoutSessionCompleted({
+          sessionId,
+          paymentIntentId: checkoutSession.payment_intent as string,
+          customerEmail: checkoutSession.customer_details?.email || null,
+          amountPaid: checkoutSession.amount_total || 0,
+          paymentStatus: checkoutSession.payment_status,
+          metadata,
+        });
+
+        if (!fallbackResult.success) {
+          console.error(
+            "Failed to finalize payment from success page:",
+            fallbackResult.error
+          );
+        }
+
+        const refreshedTransaction = await getPaymentTransaction(transactionId);
+        if (refreshedTransaction.success) {
+          transactionDetails = refreshedTransaction.data;
+        }
+      } else if (transactionResult.success) {
         transactionDetails = transactionResult.data;
       }
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { CreditCard, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import config from "@/lib/config";
+
+const stripePromise = loadStripe(config.env.stripe.publishableKey);
 
 interface Fine {
   id: string;
@@ -78,7 +82,7 @@ export default function PayNowButton({
         },
         body: JSON.stringify({
           fineIds: fines.map((fine) => fine.id),
-          returnUrl: `${window.location.origin}/fines/payment/success`,
+          returnUrl: `${window.location.origin}/fines/payment/success?session_id={CHECKOUT_SESSION_ID}`,
         }),
       });
 
@@ -86,13 +90,39 @@ export default function PayNowButton({
       const result = await response.json();
       console.log("📦 API Response data:", result);
 
-      if (result.success && result.sessionUrl) {
+      if (!response.ok || !result.success) {
+        const errorDetails = result.error || "Failed to create payment session";
+        console.log("❌ API Error:", errorDetails);
+        throw new Error(errorDetails);
+      }
+
+      const stripe = await stripePromise;
+
+      if (!stripe) {
+        throw new Error("Stripe failed to initialize. Please try again later.");
+      }
+
+      if (result.sessionId) {
+        const { error: stripeError } = await stripe.redirectToCheckout({
+          sessionId: result.sessionId,
+        });
+
+        if (stripeError) {
+          console.error("❌ Stripe redirect error:", stripeError);
+          throw new Error(
+            stripeError.message || "Failed to redirect to Stripe checkout"
+          );
+        }
+
+        return;
+      }
+
+      if (result.sessionUrl) {
         console.log("✅ Success! Redirecting to Stripe:", result.sessionUrl);
-        // Redirect to Stripe Checkout
-        window.location.href = result.sessionUrl;
+        window.location.assign(result.sessionUrl);
+        return;
       } else {
-        console.log("❌ API Error:", result.error);
-        throw new Error(result.error || "Failed to create payment session");
+        throw new Error("Missing Stripe checkout session information");
       }
     } catch (error) {
       const errorMessage =
