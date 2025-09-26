@@ -29,6 +29,12 @@ const Header = async () => {
                 >
                   Borrowed Books
                 </Link>
+                <Link
+                  href="/status"
+                  className="text-white/80 hover:text-white transition-colors duration-200 font-medium hover:border-b-2 hover:border-purple-500 pb-1"
+                >
+                  Status
+                </Link>
               </nav>
             </li>
             <li>

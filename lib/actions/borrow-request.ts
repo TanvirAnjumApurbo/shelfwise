@@ -22,6 +22,7 @@ import {
 } from "@/lib/idempotency";
 import { processAvailabilityNotifications } from "@/lib/background-jobs";
 import { BackgroundWorker } from "@/lib/worker";
+import { canUserBorrowBooks } from "@/lib/services/user-restriction-service";
 import { revalidatePath } from "next/cache";
 
 interface CreateBorrowRequestParams {
@@ -109,6 +110,37 @@ async function performBorrowRequestOperations(
 
   try {
     console.log("💾 [CREATE BORROW REQUEST] Starting database operations");
+
+    // Check if user is eligible to borrow books (no fines, not restricted)
+    console.log(
+      "🔍 [CREATE BORROW REQUEST] Checking user borrowing eligibility"
+    );
+    const borrowEligibility = await canUserBorrowBooks(userId);
+
+    if (!borrowEligibility.success) {
+      console.log(
+        "❌ [CREATE BORROW REQUEST] Failed to check borrowing eligibility"
+      );
+      return {
+        success: false,
+        error: "Unable to verify borrowing eligibility",
+      };
+    }
+
+    if (!borrowEligibility.canBorrow) {
+      console.log(
+        "❌ [CREATE BORROW REQUEST] User not eligible to borrow:",
+        borrowEligibility.reason
+      );
+      return {
+        success: false,
+        error:
+          borrowEligibility.reason ||
+          "You are not eligible to borrow books at this time",
+      };
+    }
+
+    console.log("✅ [CREATE BORROW REQUEST] User is eligible to borrow books");
 
     // Check if confirmation text matches
     console.log("📖 [CREATE BORROW REQUEST] Fetching book details");

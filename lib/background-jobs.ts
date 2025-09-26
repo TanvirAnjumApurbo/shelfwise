@@ -11,6 +11,7 @@ import { sendEmail } from "./workflow";
 import { LibraryMetrics } from "./metrics";
 import { FeatureFlags, isFeatureEnabled } from "./feature-flags";
 import { createAuditLog } from "./audit";
+import { calculateOverdueFines } from "./services/fine-service";
 import dayjs from "dayjs";
 
 /**
@@ -471,5 +472,77 @@ export async function runNightlyJobs() {
     });
 
     throw error;
+  }
+}
+
+/**
+ * Daily fine calculation job
+ * Should be run once daily (preferably at midnight) to calculate and update fines
+ */
+export async function processDailyFineCalculation(): Promise<{
+  success: boolean;
+  data?: {
+    newFines: number;
+    restrictedUsers: number;
+    unrestrictedUsers: number;
+  };
+  error?: string;
+}> {
+  console.log("🔄 [BACKGROUND JOB] Starting daily fine calculation...");
+
+  try {
+    // Calculate overdue fines
+    const fineCalculationResult = await calculateOverdueFines();
+
+    if (!fineCalculationResult.success) {
+      console.error(
+        "❌ [BACKGROUND JOB] Fine calculation failed:",
+        fineCalculationResult.error
+      );
+      return {
+        success: false,
+        error: fineCalculationResult.error,
+      };
+    }
+
+    const newFines = fineCalculationResult.data?.length || 0;
+    console.log(`✅ [BACKGROUND JOB] Calculated ${newFines} new fines`);
+
+    // Create audit log for the background job execution
+    await createAuditLog({
+      action: "ADMIN_ACTION",
+      actorType: "SYSTEM",
+      metadata: {
+        jobType: "DAILY_FINE_CALCULATION",
+        newFines,
+        executedAt: dayjs().toISOString(),
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        newFines,
+        restrictedUsers: 0, // This is handled inside calculateOverdueFines
+        unrestrictedUsers: 0,
+      },
+    };
+  } catch (error) {
+    console.error("❌ [BACKGROUND JOB] Daily fine calculation error:", error);
+
+    await createAuditLog({
+      action: "ADMIN_ACTION",
+      actorType: "SYSTEM",
+      metadata: {
+        jobType: "DAILY_FINE_CALCULATION",
+        error: error instanceof Error ? error.message : String(error),
+        executedAt: dayjs().toISOString(),
+      },
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

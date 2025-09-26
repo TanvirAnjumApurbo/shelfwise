@@ -11,6 +11,12 @@ import {
   boolean,
 } from "drizzle-orm/pg-core";
 
+// Export fine-related tables and enums
+export * from "./fines-schema";
+
+// Export payment-related tables and enums
+export * from "./payment-schema";
+
 export const STATUS_ENUM = pgEnum("status", [
   "PENDING",
   "APPROVED",
@@ -42,6 +48,17 @@ export const users = pgTable("users", {
   universityCard: text("university_card").notNull(),
   status: STATUS_ENUM("status").default("PENDING"),
   role: ROLE_ENUM("role").default("USER"),
+  // Fine and restriction related fields
+  totalFinesOwed: numeric("total_fines_owed", { precision: 10, scale: 2 })
+    .default("0.00")
+    .notNull(),
+  isRestricted: boolean("is_restricted").default(false).notNull(),
+  restrictionReason: text("restriction_reason"),
+  restrictedAt: timestamp("restricted_at", { withTimezone: true }),
+  restrictedBy: uuid("restricted_by"), // References admin who restricted
+  lastFineCalculation: timestamp("last_fine_calculation", {
+    withTimezone: true,
+  }),
   lastActivityDate: date("last_activity_date").defaultNow(),
   createdAt: timestamp("created_at", {
     withTimezone: true,
@@ -182,6 +199,12 @@ export const AUDIT_ACTION_ENUM = pgEnum("audit_action", [
   "USER_LOGIN",
   "USER_LOGOUT",
   "ADMIN_ACTION",
+  // Fine-related actions
+  "FINE_CALCULATED",
+  "FINE_PAID",
+  "FINE_WAIVED",
+  "USER_RESTRICTED",
+  "USER_UNRESTRICTED",
 ]);
 
 export const AUDIT_ACTOR_TYPE_ENUM = pgEnum("audit_actor_type", [

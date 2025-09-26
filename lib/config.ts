@@ -15,6 +15,11 @@ const config = {
       qstashToken: process.env.QSTASH_TOKEN!,
     },
     resendToken: process.env.RESEND_TOKEN!,
+    stripe: {
+      publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+      secretKey: process.env.STRIPE_SECRET_KEY!,
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+    },
   },
 };
 

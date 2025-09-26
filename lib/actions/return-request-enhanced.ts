@@ -12,6 +12,7 @@ import {
 import { eq, and, desc, sql } from "drizzle-orm";
 import { sendEmail } from "@/lib/workflow";
 import { createAuditLog } from "@/lib/audit";
+import { canUserReturnBook } from "@/lib/services/user-restriction-service";
 import { revalidatePath } from "next/cache";
 
 interface CreateReturnRequestParams {
@@ -40,6 +41,25 @@ export const createReturnRequest = async (
   const { userId, bookId, borrowRecordId, confirmationText } = params;
 
   try {
+    // Check if user can return this specific book (no pending fines for this book)
+    const returnEligibility = await canUserReturnBook(userId, borrowRecordId);
+
+    if (!returnEligibility.success) {
+      return {
+        success: false,
+        error: "Unable to verify return eligibility",
+      };
+    }
+
+    if (!returnEligibility.canReturn) {
+      return {
+        success: false,
+        error:
+          returnEligibility.reason ||
+          "You cannot return this book at this time",
+      };
+    }
+
     // Verify the borrow record exists and belongs to the user
     const borrowRecord = await db
       .select()

@@ -4,6 +4,9 @@ const createTestData = async () => {
   try {
     console.log("Creating test admin user and borrow requests...");
 
+    // Import bcrypt
+    const bcrypt = require("bcryptjs");
+
     // Database connection
     const { neon } = require("@neondatabase/serverless");
     const { drizzle } = require("drizzle-orm/neon-http");
