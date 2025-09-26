@@ -65,6 +65,23 @@ export const users = pgTable("users", {
   }).defaultNow(),
 });
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").notNull().primaryKey().defaultRandom().unique(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  codeHash: text("code_hash").notNull(),
+  resetTokenHash: text("reset_token_hash"),
+  codeExpiresAt: timestamp("code_expires_at", { withTimezone: true }).notNull(),
+  resetTokenExpiresAt: timestamp("reset_token_expires_at", {
+    withTimezone: true,
+  }),
+  codeVerifiedAt: timestamp("code_verified_at", { withTimezone: true }),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  attempts: integer("attempts").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 export const books = pgTable("books", {
   id: uuid("id").notNull().primaryKey().defaultRandom().unique(),
   title: varchar("title", { length: 255 }).notNull(),

@@ -80,6 +80,27 @@ export const signInSchema = z.object({
   password: z.string().min(8),
 });
 
+export const passwordResetRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+export const passwordResetVerifySchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{6}$/u, "Enter the 6-digit verification code"),
+});
+
+export const passwordResetCompleteSchema = z
+  .object({
+    password: z.string().min(8),
+    confirmPassword: z.string().min(8),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export const bookSchema = z.object({
   title: z.string().trim().min(2).max(150),
   description: z.string().trim().min(10).max(2000),

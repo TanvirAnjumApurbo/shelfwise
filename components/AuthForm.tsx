@@ -168,6 +168,16 @@ const AuthForm = <T extends FieldValues>({
               }}
             />
           ))}
+          {isSignIn && (
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Forgot your password?
+              </Link>
+            </div>
+          )}
           <Button type="submit" className="form-btn">
             {isSignIn ? "Sign In" : "Sign Up"}
           </Button>

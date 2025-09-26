@@ -29,6 +29,27 @@ const BookCover = ({
   coverColor = "#012B48",
   coverImage = "https://placehold.co/400x600.png",
 }: Props) => {
+  const endpoint = config.env.imagekit.urlEndpoint?.replace(/\/+$/, "");
+
+  let imagePath: string | undefined;
+  let imageSrc: string | undefined;
+
+  if (coverImage) {
+    if (endpoint && coverImage.startsWith(endpoint)) {
+      imagePath = coverImage.slice(endpoint.length).replace(/^\/+/, "");
+    } else if (/^https?:\/\//i.test(coverImage)) {
+      imageSrc = coverImage;
+    } else {
+      imagePath = coverImage.replace(/^\/+/, "");
+    }
+  }
+
+  if (!imageSrc && !imagePath) {
+    imageSrc = "https://placehold.co/400x600.png";
+  }
+
+  const ikImageProps = imageSrc ? { src: imageSrc } : { path: imagePath! };
+
   return (
     <div
       className={cn(
@@ -39,12 +60,9 @@ const BookCover = ({
     >
       <BookCoverSvg coverColor={coverColor} />
 
-      <div
-        className="absolute z-10"
-        style={{ left: "12%", width: "87.5%", height: "88%" }}
-      >
+      <div className="absolute z-10 left-[12%] w-[87.5%] h-[88%]">
         <IKImage
-          path={coverImage}
+          {...ikImageProps}
           urlEndpoint={config.env.imagekit.urlEndpoint}
           alt="Book cover"
           fill
