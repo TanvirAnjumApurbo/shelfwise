@@ -12,6 +12,8 @@ const layout = async ({ children }: { children: ReactNode }) => {
   const session = await auth();
   if (!session) redirect("/sign-in");
 
+  if (session.user.role === "ADMIN") redirect("/admin");
+
   // Get user restriction status
   const userRestrictionData = await db
     .select({

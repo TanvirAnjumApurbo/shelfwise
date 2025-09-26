@@ -5,15 +5,23 @@ import { db } from "@/database/drizzle";
 import { users } from "@/database/schema";
 import { hash } from "bcryptjs";
 import { signIn } from "@/auth";
+import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import ratelimit from "@/lib/ratelimit";
-import { redirect } from "next/navigation";
 import { workflowClient } from "@/lib/workflow";
 import config from "@/lib/config";
+import { getRedirectForRole } from "./auth-redirect";
+
+type AuthActionResult = {
+  success: boolean;
+  error?: string;
+  redirectTo?: string;
+  role?: string;
+};
 
 export const signInWithCredentials = async (
   params: Pick<AuthCredentials, "email" | "password">
-) => {
+): Promise<AuthActionResult> => {
   const { email, password } = params;
 
   const ip = (await headers()).get("x-forwarded-for") || "127.0.0.1";
@@ -32,14 +40,29 @@ export const signInWithCredentials = async (
       return { success: false, error: result.error };
     }
 
-    return { success: true };
+    const userRecord = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    const role = userRecord[0]?.role ?? "USER";
+    const redirectTo = getRedirectForRole(role);
+
+    return {
+      success: true,
+      role,
+      redirectTo,
+    };
   } catch (error) {
     console.log(error, "Signin error");
     return { success: false, error: "Signin error" };
   }
 };
 
-export const signUp = async (params: AuthCredentials) => {
+export const signUp = async (
+  params: AuthCredentials
+): Promise<AuthActionResult> => {
   const { fullName, email, universityId, password, universityCard } = params;
 
   const ip = (await headers()).get("x-forwarded-for") || "127.0.0.1";
@@ -76,9 +99,17 @@ export const signUp = async (params: AuthCredentials) => {
       },
     });
 
-    await signInWithCredentials({ email, password });
+    const signInResult = await signInWithCredentials({ email, password });
 
-    return { success: true };
+    if (!signInResult.success) {
+      return signInResult;
+    }
+
+    return {
+      success: true,
+      redirectTo: getRedirectForRole(signInResult.role),
+      role: signInResult.role,
+    };
   } catch (error) {
     console.log(error, "Signup error");
     return { success: false, error: "Signup error" };

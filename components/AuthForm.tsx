@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   DefaultValues,
@@ -26,6 +27,7 @@ import { FIELD_NAMES, FIELD_TYPES } from "@/constants";
 import FileUpload from "@/components/FileUpload";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 interface Props<T extends FieldValues> {
   schema: ZodType<T>;
@@ -46,6 +48,9 @@ const AuthForm = <T extends FieldValues>({
     resolver: zodResolver(schema as any),
     defaultValues: defaultValues as DefaultValues<T>,
   });
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const handleSubmit: SubmitHandler<T> = async (data) => {
     const result = await onSubmit(data);
@@ -62,6 +67,7 @@ const AuthForm = <T extends FieldValues>({
       toast.error(result.error ?? "An error occurred.");
     }
   };
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-semibold text-white">
@@ -77,40 +83,89 @@ const AuthForm = <T extends FieldValues>({
           onSubmit={form.handleSubmit(handleSubmit)}
           className="space-y-6 w-full"
         >
-          {Object.keys(defaultValues).map((field) => (
+          {Object.keys(defaultValues).map((fieldKey) => (
             <FormField
-              key={field}
+              key={fieldKey}
               control={form.control}
-              name={field as Path<T>}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="capitalize">
-                    {FIELD_NAMES[field.name as keyof typeof FIELD_NAMES]}
-                  </FormLabel>
-                  <FormControl>
-                    {field.name === "universityCard" ? (
-                      <FileUpload
-                        type="image"
-                        accept="image/*"
-                        placeholder="Upload your ID"
-                        folder="ids"
-                        variant="dark"
-                        onFileChange={field.onChange}
-                      />
+              name={fieldKey as Path<T>}
+              render={({ field }) => {
+                const fieldType =
+                  FIELD_TYPES[field.name as keyof typeof FIELD_TYPES] ?? "text";
+                const displayLabel =
+                  FIELD_NAMES[field.name as keyof typeof FIELD_NAMES] ??
+                  field.name;
+                const isPasswordField = fieldType === "password";
+                const isVisible = visibleFields[field.name] ?? false;
+
+                if (field.name === "universityCard") {
+                  return (
+                    <FormItem>
+                      <FormLabel className="capitalize">
+                        {displayLabel}
+                      </FormLabel>
+                      <FormControl>
+                        <FileUpload
+                          type="image"
+                          accept="image/*"
+                          placeholder="Upload your ID"
+                          folder="ids"
+                          variant="dark"
+                          onFileChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }
+
+                return (
+                  <FormItem>
+                    <FormLabel className="capitalize">{displayLabel}</FormLabel>
+                    {isPasswordField ? (
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            required
+                            type={isVisible ? "text" : "password"}
+                            {...field}
+                            className="form-input pr-12"
+                          />
+                        </FormControl>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVisibleFields((prev) => ({
+                              ...prev,
+                              [field.name]: !prev[field.name],
+                            }))
+                          }
+                          aria-label={`${
+                            isVisible ? "Hide" : "Show"
+                          } ${displayLabel.toLowerCase()}`}
+                          title={`${isVisible ? "Hide" : "Show"} password`}
+                          className="absolute inset-y-0 right-3 flex items-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                        >
+                          {isVisible ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     ) : (
-                      <Input
-                        required
-                        type={
-                          FIELD_TYPES[field.name as keyof typeof FIELD_TYPES]
-                        }
-                        {...field}
-                        className="form-input"
-                      />
+                      <FormControl>
+                        <Input
+                          required
+                          type={fieldType}
+                          {...field}
+                          className="form-input"
+                        />
+                      </FormControl>
                     )}
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
           ))}
           <Button type="submit" className="form-btn">
