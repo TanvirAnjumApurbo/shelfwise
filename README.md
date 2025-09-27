@@ -5,7 +5,6 @@
 
 <p align="center">
   <a href="https://github.com/TanvirAnjumApurbo/shelfwise/blob/main/LICENSE"><img src="https://img.shields.io/github/license/TanvirAnjumApurbo/shelfwise?color=0a7cff" alt="License" /></a>
-  <a href="https://github.com/TanvirAnjumApurbo/shelfwise/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/TanvirAnjumApurbo/shelfwise/ci.yml?branch=main&logo=github" alt="CI Build" /></a>
   <a href="https://github.com/TanvirAnjumApurbo/shelfwise/stargazers"><img src="https://img.shields.io/github/stars/TanvirAnjumApurbo/shelfwise?style=social" alt="Stars" /></a>
   <a href="https://github.com/TanvirAnjumApurbo/shelfwise/network/members"><img src="https://img.shields.io/github/forks/TanvirAnjumApurbo/shelfwise?style=social" alt="Forks" /></a>
 </p>
@@ -237,7 +236,7 @@ STRIPE_WEBHOOK_SECRET=
 
 We ❤️ contributions!
 
-| Name                 | ID/GitHub Username | Role |
+| Name                 | ID| Role |
 | -------------------- | ------------------ | ---- |
 | Tanvir Anjum Apurbo  | 2022100000027      | -    |
 | Md. Abdullah         | 2022200000035      | -    |
