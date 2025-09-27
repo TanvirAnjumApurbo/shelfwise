@@ -114,7 +114,7 @@ export const addReview = async (params: {
       };
     }
 
-    const review = await db.insert(reviews).values({
+    await db.insert(reviews).values({
       userId: params.userId,
       bookId: params.bookId,
       rating: params.rating,
@@ -125,7 +125,6 @@ export const addReview = async (params: {
 
     return {
       success: true,
-      data: review,
     };
   } catch (error) {
     console.log(error);

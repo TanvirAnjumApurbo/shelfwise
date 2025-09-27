@@ -81,7 +81,8 @@ export const updateBook = async (
     if (params.title) updateData.title = params.title;
     if (params.author) updateData.author = params.author;
     if (params.genre) updateData.genre = params.genre;
-    if (params.rating) updateData.rating = params.rating.toString();
+    if (params.rating !== undefined)
+      updateData.rating = params.rating.toString();
     if (params.coverUrl) updateData.coverUrl = params.coverUrl;
     if (params.coverColor) updateData.coverColor = params.coverColor;
     if (params.description) updateData.description = params.description;

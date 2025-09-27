@@ -74,7 +74,7 @@ const BookForm = ({ type = "create", ...book }: Props) => {
       description: book.description || "",
       author: book.author || "",
       genre: book.genre || "",
-      rating: book.rating || 1,
+      rating: book.rating ?? 1,
       totalCopies: book.totalCopies || 1,
       coverUrl: book.coverUrl || "",
       coverColor: book.coverColor || "",
@@ -243,7 +243,7 @@ const BookForm = ({ type = "create", ...book }: Props) => {
               <FormControl>
                 <Input
                   type="number"
-                  min={0.1}
+                  min={0}
                   max={5}
                   step={0.1}
                   placeholder="Book rating"

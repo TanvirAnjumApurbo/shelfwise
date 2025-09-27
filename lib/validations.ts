@@ -106,7 +106,10 @@ export const bookSchema = z.object({
   description: z.string().trim().min(10).max(2000),
   author: z.string().trim().min(2).max(100),
   genre: z.enum(BOOK_GENRES),
-  rating: z.coerce.number().min(0.1).max(5).multipleOf(0.1),
+  rating: z.coerce
+    .number()
+    .min(0, { message: "Rating must be at least 0" })
+    .max(5, { message: "Rating cannot exceed 5" }),
   totalCopies: z.coerce.number().int().positive().lte(10000),
   coverUrl: z.string().nonempty(),
   coverColor: z

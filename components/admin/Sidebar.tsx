@@ -14,12 +14,7 @@ const Sidebar = ({ session }: { session: Session }) => {
     <div className="admin-sidebar">
       <div className="flex flex-col h-full">
         <div className="logo">
-          <Image
-            src="/icons/admin/logo.svg"
-            alt="logo"
-            height={37}
-            width={37}
-          />
+          <Image src="/icons/logo.svg" alt="logo" height={37} width={37} />
           <h1>ShelfWise</h1>
         </div>
 
