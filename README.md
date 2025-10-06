@@ -238,10 +238,10 @@ We ❤️ contributions!
 
 | Name                 | ID| Role |
 | -------------------- | ------------------ | ---- |
-| Tanvir Anjum Apurbo  | 2022100000027      | -    |
-| Md. Abdullah         | 2022200000035      | -    |
-| Kh Faysal Ahammed    | 2022200000182      | -    |
-| Sarower Jahan Prince | 2022200000197      | -    |
+| Tanvir Anjum Apurbo  | 2022100000027      |Idea generation, overall project management, full-stack coding, testing, report writing, deployment, team lead, coordination, risk management, version control, domain setup, performance and security implementation   |
+| Md. Abdullah         | 2022200000035      | Idea contribution, coding support, automated testing, report writing, proofreading, presentation making, design, documentation, code review, quality assurance, meeting organization, progress monitoring   |
+| Kh Faysal Ahammed    | 2022200000182      | Technical design (ER diagram, use case diagram), user manual testing, identifying problems and edge cases, user perspective testing, testing support, documentation assistance   |
+| Sarower Jahan Prince | 2022200000197      | Domain funding, user manual testing, basic testing support   |
 
 ## License
 
